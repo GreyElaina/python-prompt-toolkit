@@ -165,10 +165,7 @@ def _split_multiline_prompt(
     """
 
     def has_before_fragments() -> bool:
-        for fragment, char, *_ in get_prompt_text():
-            if "\n" in char:
-                return True
-        return False
+        return any("\n" in char for fragment, char, *_ in get_prompt_text())
 
     def before() -> StyleAndTextTuples:
         result: StyleAndTextTuples = []
@@ -1315,13 +1312,12 @@ class PromptSession(Generic[_T]):
         Return whatever needs to be inserted before every line.
         (the prompt, or a line continuation.)
         """
-        # First line: display the "arg" or the prompt.
         if line_number == 0 and wrap_count == 0:
-            if not is_true(self.multiline) and get_app().key_processor.arg is not None:
-                return self._inline_arg()
-            else:
+            if is_true(self.multiline) or get_app().key_processor.arg is None:
                 return get_prompt_text_2()
 
+            else:
+                return self._inline_arg()
         # For the next lines, display the appropriate continuation.
         prompt_width = get_cwidth(fragment_list_to_text(get_prompt_text_2()))
         return self._get_continuation(prompt_width, line_number, wrap_count)
@@ -1343,14 +1339,13 @@ class PromptSession(Generic[_T]):
         app = get_app()
         if app.key_processor.arg is None:
             return []
-        else:
-            arg = app.key_processor.arg
+        arg = app.key_processor.arg
 
-            return [
-                ("class:prompt.arg", "(arg: "),
-                ("class:prompt.arg.text", str(arg)),
-                ("class:prompt.arg", ") "),
-            ]
+        return [
+            ("class:prompt.arg", "(arg: "),
+            ("class:prompt.arg.text", str(arg)),
+            ("class:prompt.arg", ") "),
+        ]
 
     # Expose the Input and Output objects as attributes, mainly for
     # backward-compatibility.

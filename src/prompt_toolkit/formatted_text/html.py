@@ -44,9 +44,9 @@ class HTML:
                 parts.append("class:" + ",".join(name_stack))
 
             if fg_stack:
-                parts.append("fg:" + fg_stack[-1])
+                parts.append(f"fg:{fg_stack[-1]}")
             if bg_stack:
-                parts.append("bg:" + bg_stack[-1])
+                parts.append(f"bg:{bg_stack[-1]}")
             return " ".join(parts)
 
         def process_node(node: Any) -> None:
@@ -63,13 +63,10 @@ class HTML:
                     fg = bg = ""
 
                     for k, v in child.attributes.items():
-                        if k == "fg":
-                            fg = v
                         if k == "bg":
                             bg = v
-                        if k == "color":
-                            fg = v  # Alias for 'fg'.
-
+                        elif k in ["fg", "color"]:
+                            fg = v
                     # Check for spaces in attributes. This would result in
                     # invalid style strings otherwise.
                     if " " in fg:

@@ -181,8 +181,7 @@ class TelnetConnection:
         """
 
         def handle_incoming_data() -> None:
-            data = self.conn.recv(1024)
-            if data:
+            if data := self.conn.recv(1024):
                 self.feed(data)
             else:
                 # Connection closed by client.
@@ -364,7 +363,7 @@ class TelnetServer:
                 # Unhandled control-c propagated by a prompt.
                 logger.info("Unhandled KeyboardInterrupt in telnet application.")
             except BaseException as e:
-                print("Got %s" % type(e).__name__, e)
+                print(f"Got {type(e).__name__}", e)
                 import traceback
 
                 traceback.print_exc()

@@ -96,7 +96,7 @@ class _CompiledGrammar:
         counter = [0]
 
         def create_group_func(node: Variable) -> str:
-            name = "n%s" % counter[0]
+            name = f"n{counter[0]}"
             self._group_names_to_nodes[name] = node.varname
             counter[0] += 1
             return name
@@ -153,13 +153,11 @@ class _CompiledGrammar:
         def transform(node: Node) -> str:
             # Turn `AnyNode` into an OR.
             if isinstance(node, AnyNode):
-                return "(?:%s)" % "|".join(transform(c) for c in node.children)
+                return f'(?:{"|".join((transform(c) for c in node.children))})'
 
-            # Concatenate a `NodeSequence`
             elif isinstance(node, NodeSequence):
                 return "".join(transform(c) for c in node.children)
 
-            # For Regex and Lookahead nodes, just insert them literally.
             elif isinstance(node, Regex):
                 return node.regex
 
@@ -167,14 +165,9 @@ class _CompiledGrammar:
                 before = "(?!" if node.negative else "(="
                 return before + transform(node.childnode) + ")"
 
-            # A `Variable` wraps the children into a named group.
             elif isinstance(node, Variable):
-                return "(?P<{}>{})".format(
-                    create_group_func(node),
-                    transform(node.childnode),
-                )
+                return f"(?P<{create_group_func(node)}>{transform(node.childnode)})"
 
-            # `Repeat`.
             elif isinstance(node, Repeat):
                 if node.max_repeat is None:
                     if node.min_repeat == 0:
@@ -187,11 +180,8 @@ class _CompiledGrammar:
                         ("" if node.max_repeat is None else str(node.max_repeat)),
                     )
 
-                return "(?:{}){}{}".format(
-                    transform(node.childnode),
-                    repeat_sign,
-                    ("" if node.greedy else "?"),
-                )
+                return f'(?:{transform(node.childnode)}){repeat_sign}{"" if node.greedy else "?"}'
+
             else:
                 raise TypeError(f"Got {node!r}")
 
@@ -263,11 +253,6 @@ class _CompiledGrammar:
                         r for c in children_without_variable for r in transform(c)
                     )
 
-            # For a sequence, generate a pattern for each prefix that ends with
-            # a variable + one pattern of the complete sequence.
-            # (This is because, for autocompletion, we match the text before
-            # the cursor, and completions are given for the variable that we
-            # match right before the cursor.)
             elif isinstance(node, NodeSequence):
                 # For all components in the sequence, compute prefix patterns,
                 # as well as full patterns.
@@ -295,9 +280,7 @@ class _CompiledGrammar:
 
                     # Start with complete patterns.
                     for i in range(len(node.children)):
-                        result.append("(?:")
-                        result.append(complete[i])
-
+                        result.extend(("(?:", complete[i]))
                     # Add prefix patterns.
                     for i in range(len(node.children) - 1, -1, -1):
                         if variable_nodes[i]:
@@ -308,17 +291,15 @@ class _CompiledGrammar:
                             result.append("|(?:")
                             # If this yields multiple, we should yield all combinations.
                             assert len(prefixes[i]) == 1
-                            result.append(prefixes[i][0])
-                            result.append("))")
-
+                            result.extend((prefixes[i][0], "))"))
                     yield "".join(result)
 
             elif isinstance(node, Regex):
-                yield "(?:%s)?" % node.regex
+                yield f"(?:{node.regex})?"
 
             elif isinstance(node, Lookahead):
                 if node.negative:
-                    yield "(?!%s)" % cls._transform(node.childnode, create_group_func)
+                    yield f"(?!{cls._transform(node.childnode, create_group_func)})"
                 else:
                     # Not sure what the correct semantics are in this case.
                     # (Probably it's not worth implementing this.)
@@ -340,16 +321,8 @@ class _CompiledGrammar:
                     yield from transform(node.childnode)
                 else:
                     for c_str in transform(node.childnode):
-                        if node.max_repeat:
-                            repeat_sign = "{,%i}" % (node.max_repeat - 1)
-                        else:
-                            repeat_sign = "*"
-                        yield "(?:{}){}{}{}".format(
-                            prefix,
-                            repeat_sign,
-                            ("" if node.greedy else "?"),
-                            c_str,
-                        )
+                        repeat_sign = "{,%i}" % (node.max_repeat - 1) if node.max_repeat else "*"
+                        yield f'(?:{prefix}){repeat_sign}{"" if node.greedy else "?"}{c_str}'
 
             else:
                 raise TypeError("Got %r" % node)
@@ -364,9 +337,7 @@ class _CompiledGrammar:
 
         :param string: The input string.
         """
-        m = self._re.match(string)
-
-        if m:
+        if m := self._re.match(string):
             return Match(
                 string, [(self._re, m)], self._group_names_to_nodes, self.unescape_funcs
             )
@@ -469,9 +440,11 @@ class Match:
 
         # Find all regex group for the name _INVALID_TRAILING_INPUT.
         for r, re_match in self._re_matches:
-            for group_name, group_index in r.groupindex.items():
-                if group_name == _INVALID_TRAILING_INPUT:
-                    slices.append(re_match.regs[group_index])
+            slices.extend(
+                re_match.regs[group_index]
+                for group_name, group_index in r.groupindex.items()
+                if group_name == _INVALID_TRAILING_INPUT
+            )
 
         # Take the smallest part. (Smaller trailing text means that a larger input has
         # been matched, so that is better.)
@@ -499,10 +472,7 @@ class Variables:
         self._tuples = tuples
 
     def __repr__(self) -> str:
-        return "{}({})".format(
-            self.__class__.__name__,
-            ", ".join(f"{k}={v!r}" for k, v, _ in self._tuples),
-        )
+        return f'{self.__class__.__name__}({", ".join((f"{k}={v!r}" for k, v, _ in self._tuples))})'
 
     def get(self, key: str, default: Optional[str] = None) -> Optional[str]:
         items = self.getall(key)

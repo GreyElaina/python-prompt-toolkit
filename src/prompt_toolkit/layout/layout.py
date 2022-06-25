@@ -105,7 +105,6 @@ class Layout:
                     return
             raise ValueError(f"Couldn't find Buffer in the current layout: {value!r}.")
 
-        # BufferControl by buffer object.
         elif isinstance(value, Buffer):
             for control in self.find_all_controls():
                 if isinstance(control, BufferControl) and control.buffer == value:
@@ -113,7 +112,6 @@ class Layout:
                     return
             raise ValueError(f"Couldn't find Buffer in the current layout: {value!r}.")
 
-        # Focus UIControl.
         elif isinstance(value, UIControl):
             if value not in self.find_all_controls():
                 raise ValueError(
@@ -124,7 +122,6 @@ class Layout:
 
             self.current_control = value
 
-        # Otherwise, expecting any Container object.
         else:
             value = to_container(value)
 
@@ -143,10 +140,11 @@ class Layout:
                 # of them have been focused before, take the last focused
                 # item. (This is very useful when the UI is composed of more
                 # complex sub components.)
-                windows = []
-                for c in walk(value, skip_hidden=True):
-                    if isinstance(c, Window) and c.content.is_focusable():
-                        windows.append(c)
+                windows = [
+                    c
+                    for c in walk(value, skip_hidden=True)
+                    if isinstance(c, Window) and c.content.is_focusable()
+                ]
 
                 # Take the first one that was focused before.
                 for w in reversed(self._stack):
@@ -176,17 +174,12 @@ class Layout:
             return self.current_buffer == value
         if isinstance(value, UIControl):
             return self.current_control == value
-        else:
-            value = to_container(value)
-            if isinstance(value, Window):
-                return self.current_window == value
-            else:
-                # Check whether this "container" is focused. This is true if
-                # one of the elements inside is focused.
-                for element in walk(value):
-                    if element == self.current_window:
-                        return True
-                return False
+        value = to_container(value)
+        return (
+            self.current_window == value
+            if isinstance(value, Window)
+            else any(element == self.current_window for element in walk(value))
+        )
 
     @property
     def current_control(self) -> UIControl:
@@ -269,11 +262,16 @@ class Layout:
         Look in the layout for a buffer with the given name.
         Return `None` when nothing was found.
         """
-        for w in self.walk():
-            if isinstance(w, Window) and isinstance(w.content, BufferControl):
-                if w.content.buffer.name == buffer_name:
-                    return w.content.buffer
-        return None
+        return next(
+            (
+                w.content.buffer
+                for w in self.walk()
+                if isinstance(w, Window)
+                and isinstance(w.content, BufferControl)
+                and w.content.buffer.name == buffer_name
+            ),
+            None,
+        )
 
     @property
     def buffer_has_focus(self) -> bool:

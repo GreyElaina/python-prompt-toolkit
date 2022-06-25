@@ -115,13 +115,11 @@ class MenuContainer:
             menu = self._get_menu(len(self.selected_menu) - 2)
             index = self.selected_menu[-1]
 
-            previous_indexes = [
+            if previous_indexes := [
                 i
                 for i, item in enumerate(menu.children)
                 if i < index and not item.disabled
-            ]
-
-            if previous_indexes:
+            ]:
                 self.selected_menu[-1] = previous_indexes[-1]
             elif len(self.selected_menu) == 2:
                 # Return to main menu.
@@ -133,13 +131,11 @@ class MenuContainer:
             menu = self._get_menu(len(self.selected_menu) - 2)
             index = self.selected_menu[-1]
 
-            next_indexes = [
+            if next_indexes := [
                 i
                 for i, item in enumerate(menu.children)
                 if i > index and not item.disabled
-            ]
-
-            if next_indexes:
+            ]:
                 self.selected_menu[-1] = next_indexes[0]
 
         @kb.add("enter")
@@ -368,7 +364,4 @@ class MenuItem:
 
     @property
     def width(self) -> int:
-        if self.children:
-            return max(get_cwidth(c.text) for c in self.children)
-        else:
-            return 0
+        return max(get_cwidth(c.text) for c in self.children) if self.children else 0

@@ -60,7 +60,7 @@ def main():
         Example of asyncio coroutine as a key binding.
         """
         try:
-            for i in range(5):
+            for _ in range(5):
                 async with in_terminal():
                     print("hello")
                 await asyncio.sleep(1)

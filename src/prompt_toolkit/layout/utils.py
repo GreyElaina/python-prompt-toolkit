@@ -74,7 +74,5 @@ def explode_text_fragments(fragments: Iterable[_T]) -> _ExplodedList[_T]:
     result: List[_T] = []
 
     for style, string, *rest in fragments:  # type: ignore
-        for c in string:  # type: ignore
-            result.append((style, c, *rest))  # type: ignore
-
+        result.extend((style, c, *rest) for c in string)
     return _ExplodedList(result)

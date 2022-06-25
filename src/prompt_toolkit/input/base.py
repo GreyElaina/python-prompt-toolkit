@@ -114,7 +114,7 @@ class DummyInput(Input):
         raise NotImplementedError
 
     def typeahead_hash(self) -> str:
-        return "dummy-%s" % id(self)
+        return f"dummy-{id(self)}"
 
     def read_keys(self) -> List[KeyPress]:
         return []

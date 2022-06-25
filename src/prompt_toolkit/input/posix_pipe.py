@@ -66,7 +66,7 @@ class PosixPipeInput(Vt100Input, PipeInput):
         class Stdin:
             encoding = "utf-8"
 
-            def isatty(stdin) -> bool:
+            def isatty(self) -> bool:
                 return True
 
             def fileno(stdin) -> int:

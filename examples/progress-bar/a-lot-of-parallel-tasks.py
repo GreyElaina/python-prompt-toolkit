@@ -18,7 +18,7 @@ def main():
 
         def run_task(label, total, sleep_time):
             """Complete a normal run."""
-            for i in pb(range(total), label=label):
+            for _ in pb(range(total), label=label):
                 time.sleep(sleep_time)
 
         def stop_task(label, total, sleep_time):

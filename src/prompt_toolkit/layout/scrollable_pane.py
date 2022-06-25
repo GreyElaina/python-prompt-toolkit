@@ -375,16 +375,14 @@ class ScrollablePane(Container):
         min_scroll = 0
         max_scroll = virtual_height - visible_height
 
-        if self.keep_cursor_visible():
-            # Reduce min/max scroll according to the cursor in the focused window.
-            if cursor_position is not None:
-                offsets = self.scroll_offsets
-                cpos_min_scroll = (
-                    cursor_position.y - visible_height + 1 + offsets.bottom
-                )
-                cpos_max_scroll = cursor_position.y - offsets.top
-                min_scroll = max(min_scroll, cpos_min_scroll)
-                max_scroll = max(0, min(max_scroll, cpos_max_scroll))
+        if self.keep_cursor_visible() and cursor_position is not None:
+            offsets = self.scroll_offsets
+            cpos_min_scroll = (
+                cursor_position.y - visible_height + 1 + offsets.bottom
+            )
+            cpos_max_scroll = cursor_position.y - offsets.top
+            min_scroll = max(min_scroll, cpos_min_scroll)
+            max_scroll = max(0, min(max_scroll, cpos_max_scroll))
 
         if self.keep_focused_window_visible():
             # Reduce min/max scroll according to focused window position.

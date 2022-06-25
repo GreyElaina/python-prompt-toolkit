@@ -110,7 +110,7 @@ def _output_screen_diff(
         if current_x >= width - 1:
             write("\r")
             _output_cursor_forward(new.x)
-        elif new.x < current_x or current_x >= width - 1:
+        elif new.x < current_x:
             _output_cursor_backward(current_x - new.x)
         elif new.x > current_x:
             _output_cursor_forward(new.x - current_x)
@@ -360,10 +360,11 @@ class Renderer:
 
         # Future set when we are waiting for a CPR flag.
         self._waiting_for_cpr_futures: Deque[Future[None]] = deque()
-        self.cpr_support = CPR_Support.UNKNOWN
-
-        if not output.responds_to_cpr:
-            self.cpr_support = CPR_Support.NOT_SUPPORTED
+        self.cpr_support = (
+            CPR_Support.UNKNOWN
+            if output.responds_to_cpr
+            else CPR_Support.NOT_SUPPORTED
+        )
 
         # Cache for the style.
         self._attrs_for_style: Optional[_StyleStringToAttrsCache] = None

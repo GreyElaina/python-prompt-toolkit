@@ -157,9 +157,7 @@ class StdoutProxy:
             if not item:
                 continue
 
-            text = []
-            text.append(item)
-
+            text = [item]
             # Read the rest of the queue if more data was queued up.
             while True:
                 try:

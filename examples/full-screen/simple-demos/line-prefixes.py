@@ -35,7 +35,7 @@ def get_line_prefix(lineno, wrap_count):
     if wrap_count == 0:
         return HTML('[%s] <style bg="orange" fg="black">--&gt;</style> ') % lineno
 
-    text = str(lineno) + "-" + "*" * (lineno // 2) + ": "
+    text = f"{str(lineno)}-" + "*" * (lineno // 2) + ": "
     return HTML('[%s.%s] <style bg="ansigreen" fg="ansiblack">%s</style>') % (
         lineno,
         wrap_count,

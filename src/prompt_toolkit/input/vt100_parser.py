@@ -145,27 +145,26 @@ class Vt100Parser:
                 match = self._get_match(prefix)
 
                 # Exact matches found, call handlers..
-                if (flush or not is_prefix_of_longer_match) and match:
-                    self._call_handler(match, prefix)
-                    prefix = ""
+                if (flush or not is_prefix_of_longer_match):
+                    if match:
+                        self._call_handler(match, prefix)
+                        prefix = ""
 
-                # No exact match found.
-                elif (flush or not is_prefix_of_longer_match) and not match:
-                    found = False
-                    retry = True
+                    else:
+                        found = False
+                        retry = True
 
-                    # Loop over the input, try the longest match first and
-                    # shift.
-                    for i in range(len(prefix), 0, -1):
-                        match = self._get_match(prefix[:i])
-                        if match:
-                            self._call_handler(match, prefix[:i])
-                            prefix = prefix[i:]
-                            found = True
+                                        # Loop over the input, try the longest match first and
+                                        # shift.
+                        for i in range(len(prefix), 0, -1):
+                            if match := self._get_match(prefix[:i]):
+                                self._call_handler(match, prefix[:i])
+                                prefix = prefix[i:]
+                                found = True
 
-                    if not found:
-                        self._call_handler(prefix[0], prefix[0])
-                        prefix = prefix[1:]
+                        if not found:
+                            self._call_handler(prefix[0], prefix[0])
+                            prefix = prefix[1:]
 
     def _call_handler(
         self, key: Union[str, Keys, Tuple[Keys, ...]], insert_text: str
@@ -180,12 +179,11 @@ class Vt100Parser:
             # multiple times).
             for i, k in enumerate(key):
                 self._call_handler(k, insert_text if i == 0 else "")
+        elif key == Keys.BracketedPaste:
+            self._in_bracketed_paste = True
+            self._paste_buffer = ""
         else:
-            if key == Keys.BracketedPaste:
-                self._in_bracketed_paste = True
-                self._paste_buffer = ""
-            else:
-                self.feed_key_callback(KeyPress(key, insert_text))
+            self.feed_key_callback(KeyPress(key, insert_text))
 
     def feed(self, data: str) -> None:
         """

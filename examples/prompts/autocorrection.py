@@ -28,10 +28,9 @@ def main():
         b = event.app.current_buffer
         w = b.document.get_word_before_cursor()
 
-        if w is not None:
-            if w in corrections:
-                b.delete_before_cursor(count=len(w))
-                b.insert_text(corrections[w])
+        if w is not None and w in corrections:
+            b.delete_before_cursor(count=len(w))
+            b.insert_text(corrections[w])
 
         b.insert_text(" ")
 

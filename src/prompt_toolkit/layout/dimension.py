@@ -111,7 +111,7 @@ class Dimension:
         if self.weight_specified:
             fields.append("weight=%r" % self.weight)
 
-        return "Dimension(%s)" % ", ".join(fields)
+        return f'Dimension({", ".join(fields)})'
 
 
 def sum_layout_dimensions(dimensions: List[Dimension]) -> Dimension:
@@ -139,10 +139,7 @@ def max_layout_dimensions(dimensions: List[Dimension]) -> Dimension:
     if all(d.is_zero() for d in dimensions):
         return dimensions[0]
 
-    # Ignore empty dimensions. (They should not reduce the size of others.)
-    dimensions = [d for d in dimensions if not d.is_zero()]
-
-    if dimensions:
+    if dimensions := [d for d in dimensions if not d.is_zero()]:
         # Take the highest minimum dimension.
         min_ = max(d.min for d in dimensions)
 

@@ -178,11 +178,7 @@ def print_container(
         print_container(
             Frame(TextArea(text='Hello world!')))
     """
-    if file:
-        output = create_output(stdout=file)
-    else:
-        output = get_app_session().output
-
+    output = create_output(stdout=file) if file else get_app_session().output
     app: Application[None] = Application(
         layout=Layout(container=container),
         output=output,

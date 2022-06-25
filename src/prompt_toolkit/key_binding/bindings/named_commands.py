@@ -126,9 +126,7 @@ def forward_word(event: E) -> None:
     digits.
     """
     buff = event.current_buffer
-    pos = buff.document.find_next_word_ending(count=event.arg)
-
-    if pos:
+    if pos := buff.document.find_next_word_ending(count=event.arg):
         buff.cursor_position += pos
 
 
@@ -139,9 +137,7 @@ def backward_word(event: E) -> None:
     of letters and digits.
     """
     buff = event.current_buffer
-    pos = buff.document.find_previous_word_beginning(count=event.arg)
-
-    if pos:
+    if pos := buff.document.find_previous_word_beginning(count=event.arg):
         buff.cursor_position += pos
 
 
@@ -296,7 +292,7 @@ def uppercase_word(event: E) -> None:
     """
     buff = event.current_buffer
 
-    for i in range(event.arg):
+    for _ in range(event.arg):
         pos = buff.document.find_next_word_ending()
         words = buff.document.text_after_cursor[:pos]
         buff.insert_text(words.upper(), overwrite=True)
@@ -309,7 +305,7 @@ def downcase_word(event: E) -> None:
     """
     buff = event.current_buffer
 
-    for i in range(event.arg):  # XXX: not DRY: see meta_c and meta_u!!
+    for _ in range(event.arg):
         pos = buff.document.find_next_word_ending()
         words = buff.document.text_after_cursor[:pos]
         buff.insert_text(words.lower(), overwrite=True)
@@ -322,7 +318,7 @@ def capitalize_word(event: E) -> None:
     """
     buff = event.current_buffer
 
-    for i in range(event.arg):
+    for _ in range(event.arg):
         pos = buff.document.find_next_word_ending()
         words = buff.document.text_after_cursor[:pos]
         buff.insert_text(words.title(), overwrite=True)
@@ -356,11 +352,10 @@ def kill_line(event: E) -> None:
         deleted = buff.delete_before_cursor(
             count=-buff.document.get_start_of_line_position()
         )
+    elif buff.document.current_char == "\n":
+        deleted = buff.delete(1)
     else:
-        if buff.document.current_char == "\n":
-            deleted = buff.delete(1)
-        else:
-            deleted = buff.delete(count=buff.document.get_end_of_line_position())
+        deleted = buff.delete(count=buff.document.get_end_of_line_position())
     event.app.clipboard.set_text(deleted)
 
 
@@ -371,9 +366,7 @@ def kill_word(event: E) -> None:
     end of the next word. Word boundaries are the same as forward-word.
     """
     buff = event.current_buffer
-    pos = buff.document.find_next_word_ending(count=event.arg)
-
-    if pos:
+    if pos := buff.document.find_next_word_ending(count=event.arg):
         deleted = buff.delete(count=pos)
 
         if event.is_repeat:
@@ -490,10 +483,10 @@ def yank_pop(event: E) -> None:
     """
     buff = event.current_buffer
     doc_before_paste = buff.document_before_paste
-    clipboard = event.app.clipboard
-
     if doc_before_paste is not None:
         buff.document = doc_before_paste
+        clipboard = event.app.clipboard
+
         clipboard.rotate()
         buff.paste_clipboard_data(clipboard.get_data(), paste_mode=PasteMode.EMACS)
 
@@ -562,10 +555,7 @@ def call_last_kbd_macro(event: E) -> None:
     the body of the called macro back into the KeyProcessor, so these keys will
     be added later on to the macro of their handlers have `record_in_macro=True`.
     """
-    # Insert the macro.
-    macro = event.app.emacs_state.macro
-
-    if macro:
+    if macro := event.app.emacs_state.macro:
         event.app.key_processor.feed_multiple(macro, first=True)
 
 
@@ -576,8 +566,7 @@ def print_last_kbd_macro(event: E) -> None:
     """
     # TODO: Make the format suitable for the inputrc file.
     def print_macro() -> None:
-        macro = event.app.emacs_state.macro
-        if macro:
+        if macro := event.app.emacs_state.macro:
             for k in macro:
                 print(k)
 
@@ -617,7 +606,7 @@ def insert_comment(event: E) -> None:
     else:
 
         def change(line: str) -> str:
-            return "#" + line
+            return f"#{line}"
 
     buff.document = Document(
         text="\n".join(map(change, buff.text.splitlines())), cursor_position=0

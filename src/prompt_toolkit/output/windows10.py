@@ -63,7 +63,7 @@ class Windows10_Output:
         return False  # We don't need this on Windows.
 
     def __getattr__(self, name: str) -> Any:
-        if name in (
+        if name in {
             "get_size",
             "get_rows_below_cursor_position",
             "enable_mouse_support",
@@ -73,7 +73,7 @@ class Windows10_Output:
             "enable_bracketed_paste",
             "disable_bracketed_paste",
             "get_default_color_depth",
-        ):
+        }:
             return getattr(self.win32_output, name)
         else:
             return getattr(self.vt100_output, name)

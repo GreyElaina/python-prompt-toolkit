@@ -87,10 +87,10 @@ def has_focus(value: "FocusableElement") -> Condition:
                 # focused.
                 current_window = get_app().layout.current_window
 
-                for c in walk(cast(Container, value)):
-                    if isinstance(c, Window) and c == current_window:
-                        return True
-                return False
+                return any(
+                    isinstance(c, Window) and c == current_window
+                    for c in walk(cast(Container, value))
+                )
 
     @Condition
     def has_focus_filter() -> bool:

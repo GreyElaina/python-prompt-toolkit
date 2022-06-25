@@ -22,9 +22,7 @@ class PygmentsTokens:
         self.token_list = token_list
 
     def __pt_formatted_text__(self) -> StyleAndTextTuples:
-        result: StyleAndTextTuples = []
-
-        for token, text in self.token_list:
-            result.append(("class:" + pygments_token_to_classname(token), text))
-
-        return result
+        return [
+            (f"class:{pygments_token_to_classname(token)}", text)
+            for token, text in self.token_list
+        ]

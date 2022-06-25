@@ -137,10 +137,10 @@ class FuzzyCompleter(Completer):
             # additional styling or characters).
             return m.completion.display
 
-        result: StyleAndTextTuples = []
+        result: StyleAndTextTuples = [
+            ("class:fuzzymatch.outside", word[: m.start_pos])
+        ]
 
-        # Text before match.
-        result.append(("class:fuzzymatch.outside", word[: m.start_pos]))
 
         # The match itself.
         characters = list(word_before_cursor)

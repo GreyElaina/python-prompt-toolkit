@@ -333,9 +333,8 @@ def _get_reverse_ansi_sequences() -> Dict[Keys, str]:
     result: Dict[Keys, str] = {}
 
     for sequence, key in ANSI_SEQUENCES.items():
-        if not isinstance(key, tuple):
-            if key not in result:
-                result[key] = sequence
+        if not isinstance(key, tuple) and key not in result:
+            result[key] = sequence
 
     return result
 

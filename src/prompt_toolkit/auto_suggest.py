@@ -44,7 +44,7 @@ class Suggestion:
         self.text = text
 
     def __repr__(self) -> str:
-        return "Suggestion(%s)" % self.text
+        return f"Suggestion({self.text})"
 
 
 class AutoSuggest(metaclass=ABCMeta):
