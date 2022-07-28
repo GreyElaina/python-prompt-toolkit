@@ -346,23 +346,19 @@ class ValidationToolbar:
         def get_formatted_text() -> StyleAndTextTuples:
             buff = get_app().current_buffer
 
-            if buff.validation_error:
-                row, column = buff.document.translate_index_to_position(
-                    buff.validation_error.cursor_position
-                )
-
-                if show_position:
-                    text = "{} (line={} column={})".format(
-                        buff.validation_error.message,
-                        row + 1,
-                        column + 1,
-                    )
-                else:
-                    text = buff.validation_error.message
-
-                return [("class:validation-toolbar", text)]
-            else:
+            if not buff.validation_error:
                 return []
+            row, column = buff.document.translate_index_to_position(
+                buff.validation_error.cursor_position
+            )
+
+            text = (
+                f"{buff.validation_error.message} (line={row + 1} column={column + 1})"
+                if show_position
+                else buff.validation_error.message
+            )
+
+            return [("class:validation-toolbar", text)]
 
         self.control = FormattedTextControl(get_formatted_text)
 

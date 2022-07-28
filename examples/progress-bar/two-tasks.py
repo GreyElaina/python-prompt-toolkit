@@ -12,11 +12,11 @@ def main():
     with ProgressBar() as pb:
         # Two parallal tasks.
         def task_1():
-            for i in pb(range(100)):
+            for _ in pb(range(100)):
                 time.sleep(0.05)
 
         def task_2():
-            for i in pb(range(150)):
+            for _ in pb(range(150)):
                 time.sleep(0.08)
 
         # Start threads.

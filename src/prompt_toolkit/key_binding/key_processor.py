@@ -40,11 +40,7 @@ class KeyPress:
         assert isinstance(key, Keys) or len(key) == 1
 
         if data is None:
-            if isinstance(key, Keys):
-                data = key.value
-            else:
-                data = key  # 'key' is a one character string.
-
+            data = key.value if isinstance(key, Keys) else key
         self.key = key
         self.data = data
 
@@ -52,9 +48,11 @@ class KeyPress:
         return f"{self.__class__.__name__}(key={self.key!r}, data={self.data!r})"
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, KeyPress):
-            return False
-        return self.key == other.key and self.data == other.data
+        return (
+            self.key == other.key and self.data == other.data
+            if isinstance(other, KeyPress)
+            else False
+        )
 
 
 """
@@ -172,35 +170,30 @@ class KeyProcessor:
                 else:
                     is_prefix_of_longer_match = self._is_prefix_of_longer_match(buffer)
 
-                # When eager matches were found, give priority to them and also
-                # ignore all the longer matches.
-                eager_matches = [m for m in matches if m.eager()]
-
-                if eager_matches:
+                if eager_matches := [m for m in matches if m.eager()]:
                     matches = eager_matches
                     is_prefix_of_longer_match = False
 
                 # Exact matches found, call handler.
-                if not is_prefix_of_longer_match and matches:
-                    self._call_handler(matches[-1], key_sequence=buffer[:])
-                    del buffer[:]  # Keep reference.
+                if not is_prefix_of_longer_match:
+                    if matches:
+                        self._call_handler(matches[-1], key_sequence=buffer[:])
+                        del buffer[:]  # Keep reference.
 
-                # No match found.
-                elif not is_prefix_of_longer_match and not matches:
-                    retry = True
-                    found = False
+                    else:
+                        retry = True
+                        found = False
 
-                    # Loop over the input, try longest match first and shift.
-                    for i in range(len(buffer), 0, -1):
-                        matches = self._get_matches(buffer[:i])
-                        if matches:
-                            self._call_handler(matches[-1], key_sequence=buffer[:i])
-                            del buffer[:i]
-                            found = True
-                            break
+                                        # Loop over the input, try longest match first and shift.
+                        for i in range(len(buffer), 0, -1):
+                            if matches := self._get_matches(buffer[:i]):
+                                self._call_handler(matches[-1], key_sequence=buffer[:i])
+                                del buffer[:i]
+                                found = True
+                                break
 
-                    if not found:
-                        del buffer[:1]
+                        if not found:
+                            del buffer[:1]
 
     def feed(self, key_press: KeyPress, first: bool = False) -> None:
         """
@@ -246,13 +239,12 @@ class KeyProcessor:
                 return bool(self.input_queue)
 
         def get_next() -> KeyPress:
-            if app.is_done:
-                # Only process CPR responses. Everything else is typeahead.
-                cpr = [k for k in self.input_queue if k.key == Keys.CPRResponse][0]
-                self.input_queue.remove(cpr)
-                return cpr
-            else:
+            if not app.is_done:
                 return self.input_queue.popleft()
+            # Only process CPR responses. Everything else is typeahead.
+            cpr = [k for k in self.input_queue if k.key == Keys.CPRResponse][0]
+            self.input_queue.remove(cpr)
+            return cpr
 
         is_flush = False
 
@@ -372,10 +364,12 @@ class KeyProcessor:
         """
         app = event.app
 
-        if app.editing_mode == EditingMode.VI:
-            # Not waiting for a text object and no argument has been given.
-            if app.vi_state.operator_func is None and self.arg is None:
-                app.vi_state.temporary_navigation_mode = False
+        if (
+            app.editing_mode == EditingMode.VI
+            and app.vi_state.operator_func is None
+            and self.arg is None
+        ):
+            app.vi_state.temporary_navigation_mode = False
 
     def _start_timeout(self) -> None:
         """
@@ -491,7 +485,7 @@ class KeyPressEvent:
         result = int(self._arg or 1)
 
         # Don't exceed a million.
-        if int(result) >= 1000000:
+        if result >= 1000000:
             result = 1
 
         return result

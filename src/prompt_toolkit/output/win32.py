@@ -205,14 +205,9 @@ class Win32Output(Output):
 
         self.flush()
         sbinfo = CONSOLE_SCREEN_BUFFER_INFO()
-        success = windll.kernel32.GetConsoleScreenBufferInfo(
+        if success := windll.kernel32.GetConsoleScreenBufferInfo(
             self.hconsole, byref(sbinfo)
-        )
-
-        # success = self._winapi(windll.kernel32.GetConsoleScreenBufferInfo,
-        #                        self.hconsole, byref(sbinfo))
-
-        if success:
+        ):
             return sbinfo
         else:
             raise NoConsoleScreenBufferError
@@ -301,7 +296,7 @@ class Win32Output(Output):
         if color_depth != ColorDepth.DEPTH_1_BIT:
             # Override the last four bits: foreground color.
             if fgcolor:
-                win_attrs = win_attrs & ~0xF
+                win_attrs &= ~0xF
                 win_attrs |= self.color_lookup_table.lookup_fg_color(fgcolor)
 
             # Override the next four bits: background color.
@@ -649,7 +644,7 @@ class ColorLookupTable:
         indexes = self.best_match.get(color, None)
         if indexes is None:
             try:
-                rgb = int(str(color), 16)
+                rgb = int(color, 16)
             except ValueError:
                 rgb = 0
 

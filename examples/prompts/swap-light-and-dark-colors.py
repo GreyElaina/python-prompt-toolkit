@@ -48,11 +48,7 @@ def main():
         swapped[0] = not swapped[0]
 
     def bottom_toolbar():
-        if swapped[0]:
-            on = "on=true"
-        else:
-            on = "on=false"
-
+        on = "on=true" if swapped[0] else "on=false"
         return (
             HTML(
                 'Press <style bg="#222222" fg="#ff8888">[control-t]</style> '

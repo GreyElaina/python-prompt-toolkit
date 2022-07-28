@@ -248,20 +248,14 @@ class TextArea:
         )
 
         if multiline:
-            if scrollbar:
-                right_margins = [ScrollbarMargin(display_arrows=True)]
-            else:
-                right_margins = []
-            if line_numbers:
-                left_margins = [NumberedMargin()]
-            else:
-                left_margins = []
+            right_margins = [ScrollbarMargin(display_arrows=True)] if scrollbar else []
+            left_margins = [NumberedMargin()] if line_numbers else []
         else:
             height = D.exact(1)
             left_margins = []
             right_margins = []
 
-        style = "class:text-area " + style
+        style = f"class:text-area {style}"
 
         # If no height was given, guarantee height of at least 1.
         if height is None:
@@ -352,16 +346,14 @@ class Label:
         self.text = text
 
         def get_width() -> AnyDimension:
-            if width is None:
-                text_fragments = to_formatted_text(self.text)
-                text = fragment_list_to_text(text_fragments)
-                if text:
-                    longest_line = max(get_cwidth(line) for line in text.splitlines())
-                else:
-                    return D(preferred=0)
-                return D(preferred=longest_line)
-            else:
+            if width is not None:
                 return width
+            text_fragments = to_formatted_text(self.text)
+            if text := fragment_list_to_text(text_fragments):
+                longest_line = max(get_cwidth(line) for line in text.splitlines())
+            else:
+                return D(preferred=0)
+            return D(preferred=longest_line)
 
         self.formatted_text_control = FormattedTextControl(text=lambda: self.text)
 
@@ -858,11 +850,7 @@ class RadioList(_DialogList[_T]):
         values: Sequence[Tuple[_T, AnyFormattedText]],
         default: Optional[_T] = None,
     ) -> None:
-        if default is None:
-            default_values = None
-        else:
-            default_values = [default]
-
+        default_values = None if default is None else [default]
         super().__init__(values, default_values=default_values)
 
 
@@ -901,10 +889,7 @@ class Checkbox(CheckboxList[str]):
 
     @checked.setter
     def checked(self, value: bool) -> None:
-        if value:
-            self.current_values = ["value"]
-        else:
-            self.current_values = []
+        self.current_values = ["value"] if value else []
 
 
 class VerticalLine:
@@ -943,10 +928,6 @@ class ProgressBar:
         self.container = FloatContainer(
             content=Window(height=1),
             floats=[
-                # We first draw the label, then the actual progress bar.  Right
-                # now, this is the only way to have the colors of the progress
-                # bar appear on top of the label. The problem is that our label
-                # can't be part of any `Window` below.
                 Float(content=self.label, top=0, bottom=0),
                 Float(
                     left=0,
@@ -957,11 +938,13 @@ class ProgressBar:
                         [
                             Window(
                                 style="class:progress-bar.used",
-                                width=lambda: D(weight=int(self._percentage)),
+                                width=lambda: D(weight=self._percentage),
                             ),
                             Window(
                                 style="class:progress-bar",
-                                width=lambda: D(weight=int(100 - self._percentage)),
+                                width=lambda: D(
+                                    weight=int(100 - self._percentage)
+                                ),
                             ),
                         ]
                     ),

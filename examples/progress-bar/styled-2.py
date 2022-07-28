@@ -37,12 +37,12 @@ def main():
         formatters.TimeLeft(),
     ]
     with ProgressBar(
-        title="Progress bar example with custom formatter.",
-        formatters=custom_formatters,
-        style=style,
-    ) as pb:
+            title="Progress bar example with custom formatter.",
+            formatters=custom_formatters,
+            style=style,
+        ) as pb:
 
-        for i in pb(range(20), label="Downloading..."):
+        for _ in pb(range(20), label="Downloading..."):
             time.sleep(1)
 
 

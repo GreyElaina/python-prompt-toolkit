@@ -49,26 +49,24 @@ def parse_color(text: str) -> str:
         pass
 
     # Hex codes.
-    if text[0:1] == "#":
+    if text.startswith("#"):
         col = text[1:]
 
         # Keep this for backwards-compatibility (Pygments does it).
         # I don't like the '#' prefix for named colors.
-        if col in ANSI_COLOR_NAMES:
+        if (
+            col in ANSI_COLOR_NAMES
+            or col not in ANSI_COLOR_NAMES_ALIASES
+            and len(col) == 6
+        ):
             return col
         elif col in ANSI_COLOR_NAMES_ALIASES:
             return ANSI_COLOR_NAMES_ALIASES[col]
 
-        # 6 digit hex color.
-        elif len(col) == 6:
-            return col
-
-        # 3 digit hex color.
         elif len(col) == 3:
             return col[0] * 2 + col[1] * 2 + col[2] * 2
 
-    # Default.
-    elif text in ("", "default"):
+    elif text in {"", "default"}:
         return text
 
     raise ValueError("Wrong color format %r" % text)
@@ -95,13 +93,9 @@ def _expand_classname(classname: str) -> List[str]:
 
     E.g. 'a.b.c' becomes ['a', 'a.b', 'a.b.c']
     """
-    result = []
     parts = classname.split(".")
 
-    for i in range(1, len(parts) + 1):
-        result.append(".".join(parts[:i]).lower())
-
-    return result
+    return [".".join(parts[:i]).lower() for i in range(1, len(parts) + 1)]
 
 
 def _parse_style_str(style_str: str) -> Attrs:
@@ -110,16 +104,12 @@ def _parse_style_str(style_str: str) -> Attrs:
     and return a `Attrs` instance.
     """
     # Start from default Attrs.
-    if "noinherit" in style_str:
-        attrs = DEFAULT_ATTRS
-    else:
-        attrs = _EMPTY_ATTRS
-
+    attrs = DEFAULT_ATTRS if "noinherit" in style_str else _EMPTY_ATTRS
     # Now update with the given attributes.
     for part in style_str.split():
         if part == "noinherit":
-            pass
-        elif part == "bold":
+            continue
+        if part == "bold":
             attrs = attrs._replace(bold=True)
         elif part == "nobold":
             attrs = attrs._replace(bold=False)
@@ -136,7 +126,6 @@ def _parse_style_str(style_str: str) -> Attrs:
         elif part == "nostrike":
             attrs = attrs._replace(strike=False)
 
-        # prompt_toolkit extensions. Not in Pygments.
         elif part == "blink":
             attrs = attrs._replace(blink=True)
         elif part == "noblink":
@@ -150,18 +139,14 @@ def _parse_style_str(style_str: str) -> Attrs:
         elif part == "nohidden":
             attrs = attrs._replace(hidden=False)
 
-        # Pygments properties that we ignore.
         elif part in ("roman", "sans", "mono"):
             pass
         elif part.startswith("border:"):
             pass
 
-        # Ignore pieces in between square brackets. This is internal stuff.
-        # Like '[transparent]' or '[set-cursor-position]'.
         elif part.startswith("[") and part.endswith("]"):
             pass
 
-        # Colors.
         elif part.startswith("bg:"):
             attrs = attrs._replace(bgcolor=parse_color(part[3:]))
         elif part.startswith("fg:"):  # The 'fg:' prefix is optional.
@@ -291,9 +276,7 @@ class Style(BaseStyle):
 
                 for new_name in new_class_names:
                     # Build a set of all possible class combinations to be applied.
-                    combos = set()
-                    combos.add(frozenset([new_name]))
-
+                    combos = {frozenset([new_name])}
                     for count in range(1, len(class_names) + 1):
                         for c2 in itertools.combinations(class_names, count):
                             combos.add(frozenset(c2 + (new_name,)))
@@ -305,7 +288,6 @@ class Style(BaseStyle):
 
                     class_names.add(new_name)
 
-            # Process inline style.
             else:
                 inline_attrs = _parse_style_str(part)
                 list_of_attrs.append(inline_attrs)

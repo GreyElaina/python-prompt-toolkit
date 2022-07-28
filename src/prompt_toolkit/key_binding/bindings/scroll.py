@@ -101,16 +101,14 @@ def scroll_one_line_down(event: E) -> None:
     w = event.app.layout.current_window
     b = event.app.current_buffer
 
-    if w:
-        # When the cursor is at the top, move to the next line. (Otherwise, only scroll.)
-        if w.render_info:
-            info = w.render_info
+    if w and w.render_info:
+        info = w.render_info
 
-            if w.vertical_scroll < info.content_height - info.window_height:
-                if info.cursor_position.y <= info.configured_scroll_offsets.top:
-                    b.cursor_position += b.document.get_cursor_down_position()
+        if w.vertical_scroll < info.content_height - info.window_height:
+            if info.cursor_position.y <= info.configured_scroll_offsets.top:
+                b.cursor_position += b.document.get_cursor_down_position()
 
-                w.vertical_scroll += 1
+            w.vertical_scroll += 1
 
 
 def scroll_one_line_up(event: E) -> None:
@@ -118,30 +116,27 @@ def scroll_one_line_up(event: E) -> None:
     scroll_offset -= 1
     """
     w = event.app.layout.current_window
-    b = event.app.current_buffer
+    if w and w.render_info and w.vertical_scroll > 0:
+        b = event.app.current_buffer
 
-    if w:
-        # When the cursor is at the bottom, move to the previous line. (Otherwise, only scroll.)
-        if w.render_info:
-            info = w.render_info
+        info = w.render_info
 
-            if w.vertical_scroll > 0:
-                first_line_height = info.get_height_for_line(info.first_visible_line())
+        first_line_height = info.get_height_for_line(info.first_visible_line())
 
-                cursor_up = info.cursor_position.y - (
-                    info.window_height
-                    - 1
-                    - first_line_height
-                    - info.configured_scroll_offsets.bottom
-                )
+        cursor_up = info.cursor_position.y - (
+            info.window_height
+            - 1
+            - first_line_height
+            - info.configured_scroll_offsets.bottom
+        )
 
-                # Move cursor up, as many steps as the height of the first line.
-                # TODO: not entirely correct yet, in case of line wrapping and many long lines.
-                for _ in range(max(0, cursor_up)):
-                    b.cursor_position += b.document.get_cursor_up_position()
+        # Move cursor up, as many steps as the height of the first line.
+        # TODO: not entirely correct yet, in case of line wrapping and many long lines.
+        for _ in range(max(0, cursor_up)):
+            b.cursor_position += b.document.get_cursor_up_position()
 
-                # Scroll window
-                w.vertical_scroll -= 1
+        # Scroll window
+        w.vertical_scroll -= 1
 
 
 def scroll_page_down(event: E) -> None:

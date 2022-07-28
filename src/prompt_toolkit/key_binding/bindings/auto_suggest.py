@@ -43,9 +43,7 @@ def load_auto_suggest_bindings() -> KeyBindings:
         Accept suggestion.
         """
         b = event.current_buffer
-        suggestion = b.suggestion
-
-        if suggestion:
+        if suggestion := b.suggestion:
             b.insert_text(suggestion.text)
 
     @handle("escape", "f", filter=suggestion_available & emacs_mode)
@@ -54,9 +52,7 @@ def load_auto_suggest_bindings() -> KeyBindings:
         Fill partial suggestion.
         """
         b = event.current_buffer
-        suggestion = b.suggestion
-
-        if suggestion:
+        if suggestion := b.suggestion:
             t = re.split(r"(\S+\s+)", suggestion.text)
             b.insert_text(next(x for x in t if x))
 

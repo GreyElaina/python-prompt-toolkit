@@ -41,10 +41,10 @@ class PromptToolkitSSHSession(asyncssh.SSHServerSession):  # type: ignore
                 except BrokenPipeError:
                     pass  # Channel not open for sending.
 
-            def isatty(s) -> bool:
+            def isatty(self) -> bool:
                 return True
 
-            def flush(s) -> None:
+            def flush(self) -> None:
                 pass
 
             @property
@@ -60,9 +60,8 @@ class PromptToolkitSSHSession(asyncssh.SSHServerSession):  # type: ignore
         """
         if self._chan is None:
             return Size(rows=20, columns=79)
-        else:
-            width, height, pixwidth, pixheight = self._chan.get_terminal_size()
-            return Size(rows=height, columns=width)
+        width, height, pixwidth, pixheight = self._chan.get_terminal_size()
+        return Size(rows=height, columns=width)
 
     def connection_made(self, chan: Any) -> None:
         self._chan = chan

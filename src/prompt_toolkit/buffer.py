@@ -119,19 +119,19 @@ class CompletionState:
         """
         if self.complete_index is None:
             return self.original_document.text, self.original_document.cursor_position
-        else:
-            original_text_before_cursor = self.original_document.text_before_cursor
-            original_text_after_cursor = self.original_document.text_after_cursor
+        original_text_before_cursor = self.original_document.text_before_cursor
+        original_text_after_cursor = self.original_document.text_after_cursor
 
-            c = self.completions[self.complete_index]
-            if c.start_position == 0:
-                before = original_text_before_cursor
-            else:
-                before = original_text_before_cursor[: c.start_position]
+        c = self.completions[self.complete_index]
+        before = (
+            original_text_before_cursor
+            if c.start_position == 0
+            else original_text_before_cursor[: c.start_position]
+        )
 
-            new_text = before + c.text + original_text_after_cursor
-            new_cursor_position = len(before) + len(c.text)
-            return new_text, new_cursor_position
+        new_text = before + c.text + original_text_after_cursor
+        new_cursor_position = len(before) + len(c.text)
+        return new_text, new_cursor_position
 
     @property
     def current_completion(self) -> Optional["Completion"]:
@@ -313,11 +313,7 @@ class Buffer:
         self.reset(document=document)
 
     def __repr__(self) -> str:
-        if len(self.text) < 15:
-            text = self.text
-        else:
-            text = self.text[:12] + "..."
-
+        text = self.text if len(self.text) < 15 else f"{self.text[:12]}..."
         return f"<Buffer(name={self.name!r}, text={text!r}) at {id(self)!r}>"
 
     def reset(
@@ -449,14 +445,12 @@ class Buffer:
         working_lines[working_index] = value
 
         # Return True when this text has been changed.
-        if len(value) != len(original_value):
+        if len(value) != len(original_value) or value != original_value:
             # For Python 2, it seems that when two strings have a different
             # length and one is a prefix of the other, Python still scans
             # character by character to see whether the strings are different.
             # (Some benchmarking showed significant differences for big
             # documents. >100,000 of lines.)
-            return True
-        elif value != original_value:
             return True
         return False
 
@@ -479,16 +473,12 @@ class Buffer:
         otherwise set a Document instead.)
         """
         # Ensure cursor position remains within the size of the text.
-        if self.cursor_position > len(value):
-            self.cursor_position = len(value)
-
+        self.cursor_position = min(self.cursor_position, len(value))
         # Don't allow editing of read-only buffers.
         if self.read_only():
             raise EditReadOnlyBuffer()
 
-        changed = self._set_text(value)
-
-        if changed:
+        if changed := self._set_text(value):
             self._text_changed()
 
             # Reset history search text.
@@ -509,14 +499,9 @@ class Buffer:
         assert isinstance(value, int)
 
         # Ensure cursor position is within the size of the text.
-        if value > len(self.text):
-            value = len(self.text)
-        if value < 0:
-            value = 0
-
-        changed = self._set_cursor_position(value)
-
-        if changed:
+        value = min(value, len(self.text))
+        value = max(value, 0)
+        if changed := self._set_cursor_position(value):
             self._cursor_position_changed()
 
     @property
@@ -959,24 +944,22 @@ class Buffer:
         for i, string in enumerate(self._working_lines):
             for j, l in enumerate(string.split("\n")):
                 l = l.strip()
-                if l and l.startswith(current_line):
-                    # When a new line has been found.
-                    if l not in found_completions:
-                        found_completions.add(l)
+                if l and l.startswith(current_line) and l not in found_completions:
+                    found_completions.add(l)
 
                         # Create completion.
-                        if i == self.working_index:
-                            display_meta = "Current, line %s" % (j + 1)
-                        else:
-                            display_meta = f"History {i + 1}, line {j + 1}"
+                    if i == self.working_index:
+                        display_meta = f"Current, line {j + 1}"
+                    else:
+                        display_meta = f"History {i + 1}, line {j + 1}"
 
-                        completions.append(
-                            Completion(
-                                text=l,
-                                start_position=-len(current_line),
-                                display_meta=display_meta,
-                            )
+                    completions.append(
+                        Completion(
+                            text=l,
+                            start_position=-len(current_line),
+                            display_meta=display_meta,
                         )
+                    )
 
         self._set_completions(completions=completions[::-1])
         self.go_to_completion(0)
@@ -1421,19 +1404,18 @@ class Buffer:
                         working_index,
                         Document(document.text, document.cursor_position + new_index),
                     )
-                else:
-                    # No match, go forward in the history. (Include len+1 to wrap around.)
-                    # (Here we should always include all cursor positions, because
-                    # it's a different line.)
-                    for i in range(working_index + 1, len(self._working_lines) + 1):
-                        i %= len(self._working_lines)
+                # No match, go forward in the history. (Include len+1 to wrap around.)
+                # (Here we should always include all cursor positions, because
+                # it's a different line.)
+                for i in range(working_index + 1, len(self._working_lines) + 1):
+                    i %= len(self._working_lines)
 
-                        document = Document(self._working_lines[i], 0)
-                        new_index = document.find(
-                            text, include_current_position=True, ignore_case=ignore_case
-                        )
-                        if new_index is not None:
-                            return (i, Document(document.text, new_index))
+                    document = Document(self._working_lines[i], 0)
+                    new_index = document.find(
+                        text, include_current_position=True, ignore_case=ignore_case
+                    )
+                    if new_index is not None:
+                        return (i, Document(document.text, new_index))
             else:
                 # Try find at the current input.
                 new_index = document.find_backwards(text, ignore_case=ignore_case)
@@ -1443,22 +1425,21 @@ class Buffer:
                         working_index,
                         Document(document.text, document.cursor_position + new_index),
                     )
-                else:
-                    # No match, go back in the history. (Include -1 to wrap around.)
-                    for i in range(working_index - 1, -2, -1):
-                        i %= len(self._working_lines)
+                # No match, go back in the history. (Include -1 to wrap around.)
+                for i in range(working_index - 1, -2, -1):
+                    i %= len(self._working_lines)
 
-                        document = Document(
-                            self._working_lines[i], len(self._working_lines[i])
+                    document = Document(
+                        self._working_lines[i], len(self._working_lines[i])
+                    )
+                    new_index = document.find_backwards(
+                        text, ignore_case=ignore_case
+                    )
+                    if new_index is not None:
+                        return (
+                            i,
+                            Document(document.text, len(document.text) + new_index),
                         )
-                        new_index = document.find_backwards(
-                            text, ignore_case=ignore_case
-                        )
-                        if new_index is not None:
-                            return (
-                                i,
-                                Document(document.text, len(document.text) + new_index),
-                            )
             return None
 
         # Do 'count' search iterations.
@@ -1485,18 +1466,16 @@ class Buffer:
 
         if search_result is None:
             return self.document
-        else:
-            working_index, cursor_position = search_result
+        working_index, cursor_position = search_result
 
             # Keep selection, when `working_index` was not changed.
-            if working_index == self.working_index:
-                selection = self.selection_state
-            else:
-                selection = None
+        selection = (
+            self.selection_state if working_index == self.working_index else None
+        )
 
-            return Document(
-                self._working_lines[working_index], cursor_position, selection=selection
-            )
+        return Document(
+            self._working_lines[working_index], cursor_position, selection=selection
+        )
 
     def get_search_position(
         self,
@@ -1515,9 +1494,8 @@ class Buffer:
 
         if search_result is None:
             return self.cursor_position
-        else:
-            working_index, cursor_position = search_result
-            return cursor_position
+        working_index, cursor_position = search_result
+        return cursor_position
 
     def apply_search(
         self,
@@ -1839,14 +1817,12 @@ class Buffer:
 
             suggestion = await self.auto_suggest.get_suggestion_async(self, document)
 
-            # Set suggestion only if the text was not yet changed.
-            if self.document == document:
-                # Set suggestion and redraw interface.
-                self.suggestion = suggestion
-                self.on_suggestion_set.fire()
-            else:
+            if self.document != document:
                 # Otherwise, restart thread.
                 raise _Retry
+            # Set suggestion and redraw interface.
+            self.suggestion = suggestion
+            self.on_suggestion_set.fire()
 
         return async_suggestor
 
@@ -1868,15 +1844,8 @@ class Buffer:
         """
         Validate buffer and handle the accept action.
         """
-        valid = self.validate(set_cursor=True)
-
-        # When the validation succeeded, accept the input.
-        if valid:
-            if self.accept_handler:
-                keep_text = self.accept_handler(self)
-            else:
-                keep_text = False
-
+        if valid := self.validate(set_cursor=True):
+            keep_text = self.accept_handler(self) if self.accept_handler else False
             self.append_to_history()
 
             if not keep_text:
@@ -1952,10 +1921,7 @@ def unindent(buffer: Buffer, from_row: int, to_row: int, count: int = 1) -> None
 
     def transform(text: str) -> str:
         remove = "    " * count
-        if text.startswith(remove):
-            return text[len(remove) :]
-        else:
-            return text.lstrip()
+        return text[len(remove) :] if text.startswith(remove) else text.lstrip()
 
     # Apply transformation.
     new_text = buffer.transform_lines(line_range, transform)
@@ -1978,9 +1944,7 @@ def reshape_text(buffer: Buffer, from_row: int, to_row: int) -> None:
     lines = buffer.text.splitlines(True)
     lines_before = lines[:from_row]
     lines_after = lines[to_row + 1 :]
-    lines_to_reformat = lines[from_row : to_row + 1]
-
-    if lines_to_reformat:
+    if lines_to_reformat := lines[from_row : to_row + 1]:
         # Take indentation from the first line.
         match = re.search(r"^\s*", lines_to_reformat[0])
         length = match.end() if match else 0  # `match` can't be None, actually.

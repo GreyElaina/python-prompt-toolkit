@@ -74,8 +74,7 @@ class CompletionsMenuControl(UIControl):
         return False
 
     def preferred_width(self, max_available_width: int) -> Optional[int]:
-        complete_state = get_app().current_buffer.complete_state
-        if complete_state:
+        if complete_state := get_app().current_buffer.complete_state:
             menu_width = self._get_menu_width(500, complete_state)
             menu_meta_width = self._get_menu_meta_width(500, complete_state)
 
@@ -91,8 +90,7 @@ class CompletionsMenuControl(UIControl):
         get_line_prefix: Optional[GetLinePrefixCallable],
     ) -> Optional[int]:
 
-        complete_state = get_app().current_buffer.complete_state
-        if complete_state:
+        if complete_state := get_app().current_buffer.complete_state:
             return len(complete_state.completions)
         else:
             return 0
@@ -219,12 +217,10 @@ def _get_menu_item_fragments(
     width.
     """
     if is_current_completion:
-        style_str = "class:completion-menu.completion.current {} {}".format(
-            completion.style,
-            completion.selected_style,
-        )
+        style_str = f"class:completion-menu.completion.current {completion.style} {completion.selected_style}"
+
     else:
-        style_str = "class:completion-menu.completion " + completion.style
+        style_str = f"class:completion-menu.completion {completion.style}"
 
     text, tw = _trim_formatted_text(
         completion.display, (width - 2 if space_after else width - 1)
@@ -247,25 +243,23 @@ def _trim_formatted_text(
     """
     width = fragment_list_width(formatted_text)
 
-    # When the text is too wide, trim it.
-    if width > max_width:
-        result = []  # Text fragments.
-        remaining_width = max_width - 3
-
-        for style_and_ch in explode_text_fragments(formatted_text):
-            ch_width = get_cwidth(style_and_ch[1])
-
-            if ch_width <= remaining_width:
-                result.append(style_and_ch)
-                remaining_width -= ch_width
-            else:
-                break
-
-        result.append(("", "..."))
-
-        return result, max_width - remaining_width
-    else:
+    if width <= max_width:
         return formatted_text, width
+    result = []  # Text fragments.
+    remaining_width = max_width - 3
+
+    for style_and_ch in explode_text_fragments(formatted_text):
+        ch_width = get_cwidth(style_and_ch[1])
+
+        if ch_width <= remaining_width:
+            result.append(style_and_ch)
+            remaining_width -= ch_width
+        else:
+            break
+
+    result.append(("", "..."))
+
+    return result, max_width - remaining_width
 
 
 class CompletionsMenu(ConditionalContainer):
@@ -705,7 +699,6 @@ class _SelectedCompletionMetaControl(UIControl):
         return UIContent(get_line=get_line, line_count=1 if fragments else 0)
 
     def _get_text_fragments(self) -> StyleAndTextTuples:
-        style = "class:completion-menu.multi-column-meta"
         state = get_app().current_buffer.complete_state
 
         if (
@@ -713,6 +706,7 @@ class _SelectedCompletionMetaControl(UIControl):
             and state.current_completion
             and state.current_completion.display_meta_text
         ):
+            style = "class:completion-menu.multi-column-meta"
             return to_formatted_text(
                 cast(StyleAndTextTuples, [("", " ")])
                 + state.current_completion.display_meta

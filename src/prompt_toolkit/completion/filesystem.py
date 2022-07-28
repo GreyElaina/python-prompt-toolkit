@@ -53,9 +53,7 @@ class PathCompleter(Completer):
             if self.expanduser:
                 text = os.path.expanduser(text)
 
-            # Directories where to look.
-            dirname = os.path.dirname(text)
-            if dirname:
+            if dirname := os.path.dirname(text):
                 directories = [
                     os.path.dirname(os.path.join(p, text)) for p in self.get_paths()
                 ]
@@ -70,9 +68,11 @@ class PathCompleter(Completer):
             for directory in directories:
                 # Look for matches in this directory.
                 if os.path.isdir(directory):
-                    for filename in os.listdir(directory):
-                        if filename.startswith(prefix):
-                            filenames.append((directory, filename))
+                    filenames.extend(
+                        (directory, filename)
+                        for filename in os.listdir(directory)
+                        if filename.startswith(prefix)
+                    )
 
             # Sort
             filenames = sorted(filenames, key=lambda k: k[1])

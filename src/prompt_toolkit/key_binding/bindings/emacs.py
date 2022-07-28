@@ -496,10 +496,13 @@ def load_emacs_shift_selection_bindings() -> KeyBindingsBase:
         unshift_move(event)
         buff = event.current_buffer
 
-        if buff.selection_state is not None:
-            if buff.cursor_position == buff.selection_state.original_cursor_position:
-                # selection is now empty, so cancel selection
-                buff.exit_selection()
+        if (
+            buff.selection_state is not None
+            and buff.cursor_position
+            == buff.selection_state.original_cursor_position
+        ):
+            # selection is now empty, so cancel selection
+            buff.exit_selection()
 
     @handle(Keys.Any, filter=shift_selection_mode)
     def _replace_selection(event: E) -> None:

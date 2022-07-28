@@ -52,7 +52,7 @@ E = KeyPressEvent
 
 ascii_lowercase = string.ascii_lowercase
 
-vi_register_names = ascii_lowercase + "0123456789"
+vi_register_names = f"{ascii_lowercase}0123456789"
 
 
 class TextObjectType(Enum):
@@ -646,7 +646,7 @@ def load_vi_bindings() -> KeyBindingsBase:
 
         # Set new text.
         if before and after:
-            before = before + "\n"
+            before += "\n"
 
         # Set text and cursor position.
         buffer.document = Document(
@@ -727,7 +727,7 @@ def load_vi_bindings() -> KeyBindingsBase:
         """
         Join lines.
         """
-        for i in range(event.arg):
+        for _ in range(event.arg):
             event.current_buffer.join_next_line()
 
     @handle("g", "J", filter=vi_navigation_mode & ~is_read_only)
@@ -735,7 +735,7 @@ def load_vi_bindings() -> KeyBindingsBase:
         """
         Join lines without space.
         """
-        for i in range(event.arg):
+        for _ in range(event.arg):
             event.current_buffer.join_next_line(separator="")
 
     @handle("J", filter=vi_selection_mode & ~is_read_only)
@@ -781,8 +781,7 @@ def load_vi_bindings() -> KeyBindingsBase:
         """
         c = event.key_sequence[1].data
         if c in vi_register_names:
-            data = event.app.vi_state.named_registers.get(c)
-            if data:
+            if data := event.app.vi_state.named_registers.get(c):
                 event.current_buffer.paste_clipboard_data(
                     data, count=event.arg, paste_mode=PasteMode.VI_AFTER
                 )
@@ -794,8 +793,7 @@ def load_vi_bindings() -> KeyBindingsBase:
         """
         c = event.key_sequence[1].data
         if c in vi_register_names:
-            data = event.app.vi_state.named_registers.get(c)
-            if data:
+            if data := event.app.vi_state.named_registers.get(c):
                 event.current_buffer.paste_clipboard_data(
                     data, count=event.arg, paste_mode=PasteMode.VI_BEFORE
                 )
@@ -826,7 +824,7 @@ def load_vi_bindings() -> KeyBindingsBase:
 
     @handle("u", filter=vi_navigation_mode, save_before=(lambda e: False))
     def _undo(event: E) -> None:
-        for i in range(event.arg):
+        for _ in range(event.arg):
             event.current_buffer.undo()
 
     @handle("V", filter=vi_navigation_mode)
@@ -912,16 +910,14 @@ def load_vi_bindings() -> KeyBindingsBase:
         Delete character.
         """
         buff = event.current_buffer
-        count = min(event.arg, len(buff.document.current_line_after_cursor))
-        if count:
+        if count := min(event.arg, len(buff.document.current_line_after_cursor)):
             text = event.current_buffer.delete(count=count)
             event.app.clipboard.set_text(text)
 
     @handle("X", filter=vi_navigation_mode)
     def _delete_before_cursor(event: E) -> None:
         buff = event.current_buffer
-        count = min(event.arg, len(buff.document.current_line_before_cursor))
-        if count:
+        if count := min(event.arg, len(buff.document.current_line_before_cursor)):
             text = event.current_buffer.delete_before_cursor(count=count)
             event.app.clipboard.set_text(text)
 
@@ -1359,12 +1355,11 @@ def load_vi_bindings() -> KeyBindingsBase:
                     ci_start, ci_end
                 )
 
-            if start is not None and end is not None:
-                offset = 0 if inner else 1
-                return TextObject(start + 1 - offset, end + offset)
-            else:
+            if start is None or end is None:
                 # Nothing found.
                 return TextObject(0)
+            offset = 0 if inner else 1
+            return TextObject(start + 1 - offset, end + offset)
 
         if key is None:
             text_object("ai"[inner], ci_start, no_move_handler=True)(handler)
@@ -1416,10 +1411,9 @@ def load_vi_bindings() -> KeyBindingsBase:
         cursor to the next occurrence of character. 'x'.
         """
         event.app.vi_state.last_character_find = CharacterFind(event.data, False)
-        match = event.current_buffer.document.find(
+        if match := event.current_buffer.document.find(
             event.data, in_current_line=True, count=event.arg
-        )
-        if match:
+        ):
             return TextObject(match, type=TextObjectType.INCLUSIVE)
         else:
             return TextObject(0)
@@ -1444,10 +1438,9 @@ def load_vi_bindings() -> KeyBindingsBase:
         Move right to the next occurrence of c, then one char backward.
         """
         event.app.vi_state.last_character_find = CharacterFind(event.data, False)
-        match = event.current_buffer.document.find(
+        if match := event.current_buffer.document.find(
             event.data, in_current_line=True, count=event.arg
-        )
-        if match:
+        ):
             return TextObject(match - 1, type=TextObjectType.INCLUSIVE)
         else:
             return TextObject(0)
@@ -1494,10 +1487,7 @@ def load_vi_bindings() -> KeyBindingsBase:
                         char, in_current_line=True, count=event.arg
                     )
                     type = TextObjectType.INCLUSIVE
-            if pos:
-                return TextObject(pos, type=type)
-            else:
-                return TextObject(0)
+            return TextObject(pos, type=type) if pos else TextObject(0)
 
     repeat(True)
     repeat(False)
@@ -1722,27 +1712,25 @@ def load_vi_bindings() -> KeyBindingsBase:
         """
         buffer = event.current_buffer
 
-        if event._arg:
-            # If 'arg' has been given, the meaning of % is to go to the 'x%'
-            # row in the file.
-            if 0 < event.arg <= 100:
-                absolute_index = buffer.document.translate_row_col_to_index(
-                    int((event.arg * buffer.document.line_count - 1) / 100), 0
-                )
-                return TextObject(
-                    absolute_index - buffer.document.cursor_position,
-                    type=TextObjectType.LINEWISE,
-                )
-            else:
-                return TextObject(0)  # Do nothing.
+        if not event._arg:
+            return (
+                TextObject(match, type=TextObjectType.INCLUSIVE)
+                if (match := buffer.document.find_matching_bracket_position())
+                else TextObject(0)
+            )
 
+        # If 'arg' has been given, the meaning of % is to go to the 'x%'
+        # row in the file.
+        if 0 < event.arg <= 100:
+            absolute_index = buffer.document.translate_row_col_to_index(
+                int((event.arg * buffer.document.line_count - 1) / 100), 0
+            )
+            return TextObject(
+                absolute_index - buffer.document.cursor_position,
+                type=TextObjectType.LINEWISE,
+            )
         else:
-            # Move to the corresponding opening/closing bracket (()'s, []'s and {}'s).
-            match = buffer.document.find_matching_bracket_position()
-            if match:
-                return TextObject(match, type=TextObjectType.INCLUSIVE)
-            else:
-                return TextObject(0)
+            return TextObject(0)  # Do nothing.
 
     @text_object("|")
     def _to_column(event: E) -> TextObject:
@@ -1912,8 +1900,7 @@ def load_vi_bindings() -> KeyBindingsBase:
         p = 0
 
         for p2 in buff.multiple_cursor_positions:
-            text.append(original_text[p:p2])
-            text.append(event.data)
+            text.extend((original_text[p:p2], event.data))
             p = p2
 
         text.append(original_text[p:])

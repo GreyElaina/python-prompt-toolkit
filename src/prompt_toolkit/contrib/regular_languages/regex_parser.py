@@ -180,8 +180,7 @@ def tokenize_regex(input: str) -> List[str]:
     tokens = []
 
     while input:
-        m = p.match(input)
-        if m:
+        if m := p.match(input):
             token, input = input[: m.end()], input[m.end() :]
             if not token.isspace():
                 tokens.append(token)
@@ -200,10 +199,7 @@ def parse_regex(regex_tokens: List[str]) -> Node:
 
     def wrap(lst: List[Node]) -> Node:
         """Turn list into sequence when it contains several items."""
-        if len(lst) == 1:
-            return lst[0]
-        else:
-            return NodeSequence(lst)
+        return lst[0] if len(lst) == 1 else NodeSequence(lst)
 
     def _parse() -> Node:
         or_list: List[List[Node]] = []
@@ -212,9 +208,8 @@ def parse_regex(regex_tokens: List[str]) -> Node:
         def wrapped_result() -> Node:
             if or_list == []:
                 return wrap(result)
-            else:
-                or_list.append(result)
-                return AnyNode([wrap(i) for i in or_list])
+            or_list.append(result)
+            return AnyNode([wrap(i) for i in or_list])
 
         while tokens:
             t = tokens.pop()

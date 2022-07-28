@@ -79,13 +79,15 @@ class Completion:
             )
 
     def __eq__(self, other: object) -> bool:
-        if not isinstance(other, Completion):
-            return False
         return (
-            self.text == other.text
-            and self.start_position == other.start_position
-            and self.display == other.display
-            and self._display_meta == other._display_meta
+            (
+                self.text == other.text
+                and self.start_position == other.start_position
+                and self.display == other.display
+                and self._display_meta == other._display_meta
+            )
+            if isinstance(other, Completion)
+            else False
         )
 
     def __hash__(self) -> int:
@@ -381,16 +383,10 @@ def get_common_complete_suffix(
 
 
 def _commonprefix(strings: Iterable[str]) -> str:
-    # Similar to os.path.commonprefix
     if not strings:
         return ""
 
-    else:
-        s1 = min(strings)
-        s2 = max(strings)
+    s1 = min(strings)
+    s2 = max(strings)
 
-        for i, c in enumerate(s1):
-            if c != s2[i]:
-                return s1[:i]
-
-        return s1
+    return next((s1[:i] for i, c in enumerate(s1) if c != s2[i]), s1)
